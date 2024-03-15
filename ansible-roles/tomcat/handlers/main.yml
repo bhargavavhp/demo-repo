@@ -6,4 +6,4 @@
   service:
     name: tomcat
     state: started
-    enable: true
+    enabled: true

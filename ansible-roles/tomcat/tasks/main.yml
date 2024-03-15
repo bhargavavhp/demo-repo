@@ -19,7 +19,9 @@
 
 - name: download tomcat tar file
   uri: 
-    url: http://redrockdigimark.com/apachemirror/tomcat/tomcat-8/v8.5.31/bin/apache-tomcat-8.5.31.tar.gz
+    url: https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.87/bin/apache-tomcat-9.0.87.tar.gz
+    dest: /tmp
+    creates: /tmp/apache-tomcat-9.0.87.tar.gz
 
 - name: create tomcat directory
   file: 
@@ -27,14 +29,13 @@
     state: directory
 
 - name: untar files
-  unarchive: 
-   src: apache-tomcat-8*tar.gz 
-   dest: /opt/tomcat
+  shell: "tar xzvf /tmp/apache-tomcat-9*tar.gz -C /opt/tomcat --strip-components=1"
 
 - name: update group permissions
   file: 
     path: /opt/tomcat
     group: tomcat
+    mode: g+w
     recurse: true
 
 - name: update conf permissions
@@ -50,7 +51,7 @@
 
 - name: change owner
   file: 
-    path: "{{ item }}"
+    path: "/opt/tomcat/{{ item }}"
     group: tomcat
     recurse: true
   loop: 
