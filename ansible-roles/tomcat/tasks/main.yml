@@ -1,0 +1,68 @@
+---
+- name: install default jdk
+  apt: 
+    name: default-jdk
+    update_cache: yes
+    state: present
+
+- name: add tomcat group
+  group: 
+    name: tomcat
+    state: present
+
+- name: add tomcat user
+  user: 
+    name: tomcat
+    home: /opt/tomcat
+    shell: /bin/false
+    group: tomcat
+
+- name: download tomcat tar file
+  uri: 
+    url: http://redrockdigimark.com/apachemirror/tomcat/tomcat-8/v8.5.31/bin/apache-tomcat-8.5.31.tar.gz
+
+- name: create tomcat directory
+  file: 
+    path: /opt/tomcat
+    state: directory
+
+- name: untar files
+  unarchive: 
+   src: apache-tomcat-8*tar.gz 
+   dest: /opt/tomcat
+
+- name: update group permissions
+  file: 
+    path: /opt/tomcat
+    group: tomcat
+    recurse: true
+
+- name: update conf permissions
+  file: 
+    path: /opt/tomcat/conf
+    mode: g+r
+    recurse: true
+
+- name: update conf exec permissions
+  file:
+    path: /opt/tomcat/conf
+    mode: g+x
+
+- name: change owner
+  file: 
+    path: "{{ item }}"
+    group: tomcat
+    recurse: true
+  loop: 
+    - "webapps/"
+    - "work/"
+    - "temp/"
+    - "logs/"
+
+- name: copy tomcat service file
+  copy: 
+    src: tomcat.service
+    dest: /etc/systemd/system/tomcat.service
+  notify: 
+    - Restart Daemon
+    - Start Tomcat
