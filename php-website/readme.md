@@ -1,6 +1,7 @@
 # Simple PHP Website
 
-## To run
+### Containerized a PHP website that can be used as a simple website to practice on different DevOps tools.
+### To run
 ```
 docker run -d -p 80:80 <image-name>
 ```
