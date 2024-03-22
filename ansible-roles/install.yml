@@ -9,3 +9,5 @@
       tags: 'maven'
     - role: docker
       tags: 'docker'
+    - role: jenkins
+      tags: 'jenkins'
