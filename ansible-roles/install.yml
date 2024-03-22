@@ -3,5 +3,9 @@
   hosts: localhost
   become: true
   roles: 
-    - tomcat
-    - maven
+    - role: tomcat
+      tags: 'tomcat'
+    - role: maven
+      tags: 'maven'
+    - role: docker
+      tags: 'docker'
