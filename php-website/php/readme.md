@@ -6,4 +6,4 @@
 docker run -d -p 80:80 <image-name>
 ```
 
-Source: https://github.com/edureka-devops/projCert.git
+Source project: https://github.com/edureka-devops/projCert.git
