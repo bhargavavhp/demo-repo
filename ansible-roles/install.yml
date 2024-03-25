@@ -2,7 +2,7 @@
 - name: install roles
   hosts: all
   become: true
-  roles: 
+  roles:
     - role: tomcat
       tags: 'tomcat'
     - role: maven
