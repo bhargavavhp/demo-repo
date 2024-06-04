@@ -1,0 +1,163 @@
+Lab 1: Create a ClusterIP
+
+--> clusterip.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: webapp1
+  name: webapp1
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: webapp2
+  type: ClusterIP
+
+kubectl apply -f clusterip.yaml
+
+--> deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp2
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: webapp2
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+  
+
+kubectl create -f deployment.yaml
+
+kubectl get service webapp1 --output yaml
+curl <clusterIP>:80
+
+
+Lab 2: Create a LoadBalancer
+
+--> deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp2
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: webapp2
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+
+kubectl create -f deployment.yaml
+
+--> loadbalancer.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: webapp1
+  name: webapp1
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: webapp2
+  type: LoadBalancer
+
+kubectl create -f loadbalancer.yaml
+
+kubectl get service webapp1
+
+In browser: <loadbalancerIP>:8080
+
+Lab 3: Create a NodePort
+
+--> deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp2
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: webapp2
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+
+kubectl create -f deployment.yaml
+
+--> nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: webapp1
+  name: webapp1
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: webapp2
+  type: NodePort
+
+kubectl create -f nodeport.yaml
+
+kubectl get nodes -o wide
+
+
+Lab 4: Create a Ingress Resource
+
+--> ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: ingress
+metadata: my-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: default-service
+            port:
+              number: 80
+      - path: /backend
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: 443     
+      - path: /test
+        pathType: Prefix
+        backend:
+          service:
+            name: test-service
+            port:
+              number: 8000
+
+kubectl create -f ingress.yaml
