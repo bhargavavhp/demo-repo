@@ -1,0 +1,67 @@
+Lab 1 -Create a PV
+
+pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity: 
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+
+kubectl apply -f pv.yaml
+
+Lab 2 -Modify PV
+
+kubectl edit pv pv-volume
+
+--> edit accessModes to ReadOnlyMany
+
+
+Lab 3 -Create a PVC
+
+pv-claim.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 512Mb
+
+kubectl apply -f pv-claim.yaml
+
+Lab 4 -Consume storage
+
+
+pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: testpod
+spec:
+  volumes:
+    - name: testpod-storage
+      persistentVolumeClaim:
+        claimName: pv-claim
+  containers:
+    - name: mypod
+      image: nginx
+      volumeMounts:
+      - mountPath: "/mnt"
+        name: testpod-storage
+        readOnly: true
+
+
+kubectl apply -f pod.yaml
