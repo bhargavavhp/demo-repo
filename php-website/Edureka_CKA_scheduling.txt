@@ -1,0 +1,119 @@
+Lab Activity 1: Label Selectors
+
+kubectl run testpod1 --image=nginx
+kubectl label po testpod1 Tier=Web
+
+kubectl run testpod2 --image=nginx
+kubectl label po testpod2 Tier=App
+
+kubectl get po --show-labels
+
+Lab Activity 2: DaemonSets
+
+daemonset.yaml
+apiVersion: app/v1
+kind: DaemonSet
+metadata:
+  name: nginx
+spec:
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+  selector:
+    matchLabels:
+      app: nginx
+
+kubectl create -f daemonset.yaml
+kubectl get daemonset
+kubectl get pod -o wide
+
+
+Lab Activity 3: Resource Limits
+
+kubectl create ns Tenant-B-100Mi
+
+limit.yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota
+spec:
+  hard:
+    memory: 100Mi
+
+kubectl apply -f limit.yaml -n Tenant-B-100Mi
+
+pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-mem
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    resources:
+      requests:
+        memory: "150Mi"
+
+kubectl create -f pod.yaml
+
+
+Lab Activity 4: Multiple Schedulers
+
+scheduler.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: scheduler-test
+  labels:
+    name: schedule
+spec:
+  schedulerName: CustomScheduler
+  containers:
+  - name: nginx
+    image: nginx
+
+kubectl create -f scheduler.yaml
+kubectl get pods -o wide
+kubectl get events
+
+
+Lab Activity 5: Schedule Pod without a scheduler
+
+mkdir /etc/staticpods
+test.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: static-web
+spec:
+  containers:
+  - name: web
+    image: nginx
+    ports:
+    - containerPort: 80
+
+kubelet --pod-manifest-path=/etc/staticpods
+systemctl restart kubelet
+
+
+Lab Activity 6: Display Scheduler Event
+
+kubectl run nginx-web --image=nginx
+kubectl get events -watch
+
+Lab Activity 7: Know how to configure the Kubernetes Scheduler
+
+kube-scheduler --logtostderr=true
+
+
+
+
+
