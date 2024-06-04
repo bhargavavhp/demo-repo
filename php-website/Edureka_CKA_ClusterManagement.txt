@@ -1,0 +1,44 @@
+Lab 1 -Cluster Upgrades
+
+sudo apt-mark unhold kubeadm
+sudo apt-get update && apt-get install -y kubeadm && apt-mark hold kubadm
+
+kubeadm upgrade plan
+kubeadm upgrade plan apply <version>
+apt-mark unhold kubelet && apt-get update && apt-get install -y kubelet && apt-mark hold kubelet
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+On worker node:
+
+kubeadm upgrade node config --kubelet --version <version>
+apt-mark unhold kubelet && apt-get update && apt-get install -y kubelet && apt-mark hold kubelet
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+Lab 2 -Cluster Upgrades -OS Upgrades
+
+kubectl drain <node-name> --ignore-daemonsets
+
+kubectl get nodes -o wide
+
+kubectl uncordon <node-name>
+
+kubectl get nodes -o wide
+
+
+Lab 3 -Back up etcd
+
+check backup flag needed
+--> ETCDCTL_API=3 etcdctl snapshot backup -h
+take snapshot
+--> sudo ETCDCTL_API=3 etcdctl snapshot save snapshot.db --cacert /etc/kubernetes/pki/etcd/ca.crt --cert <cert_path> --key <key_path>
+Verify:
+sudo ETCDCTL_API=3 etcdctl snapshot status snapshot.db
+
+
+
+Lab 4 -Back up Kubernetes certificates
+
+
+sudo tar -zcvf etcd.tar.gz /etc/kubernetes/pki/etcd
