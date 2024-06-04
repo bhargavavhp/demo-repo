@@ -1,0 +1,290 @@
+Lab 1 -RBAC within a namespace
+
+
+kubectl create ns rbac-test
+
+kubectl create serviceaccount rbac-test-sa -n rbac-test
+
+role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rbac-test-role
+  namespace: rbac-test
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+
+kubectl create -f role.yaml
+
+rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-bind
+  namespace: rbac-test
+subjects:
+- kind: ServiceAccount
+  name: rbac-test-sa
+  apiGroup: ""
+roleRef:
+  kind: Role
+  name: rbac-test-role
+  apiGroup: ""
+
+kubectl create -f rolebinding.yaml
+
+
+
+Lab 2: RBAC within a cluster
+
+sudo useradd -m cluster-user-secretadmin
+openssl genrsa -out test.key 2048
+openssl req -new -key test.key -out test.csr -subj "/CN=test"
+cat > dev_csr.yaml <<EOF
+apiVersion: certificates.k8s.io/v1beta1
+kind: CertificateSigningRequest
+metadata:
+  name: dev-user-request
+spec:
+  request: $(cat certs/test.csr | base64 | tr -d '\n')
+  usages:
+  - digital signature
+  - key encipherment
+  - client auth
+EOF
+kubectl create -f dev_csr.yaml
+kubectl certificate approve dev-user-request
+kubectl get csr dev-user-request -o wide
+kubectl get csr dev-user-request -o jsonpath='{.status.certificate}' | base64 --decode > test.crt
+kubectl config set-credentials cluster-user-secretadmin\
+  --client-certificate=test.crt \
+  --client-key=test.key \
+  --embed-certs
+
+kubectl config set-context cluster-user-secretadmin --cluster=kubernetes --user=cluster-user-secretadmin
+
+kubectl config use-context cluster-user-secretadmin
+
+clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-role-secretadmin
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "watch", "list"]
+
+kubectl create -f clusterrole.yaml
+
+kubectl create clusterrolebinding cluster-user-secretadmin --clusterrole=cluster-role-secretadmin --group=cluster-user-secretadmin
+
+
+Lab 3 -Network security policy
+
+
+-->nginx.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
+
+kubectl create -f nginx.yaml
+
+-->busybox1.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox1
+spec:
+  containers:
+  - name: busybox1
+    image: busybox
+
+kubectl create -f busybox1.yaml
+kubectl label po busybox1 tier=jumppod
+
+--> busybox2.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox2
+spec:
+  containers:
+  - name: busybox2
+    image: busybox
+    ports:
+    - containerPort: 80
+
+kubectl create -f busybox2.yaml
+kubectl label po busybox2 tier=jumppod
+
+--> To get IP assigned to pods:
+kubectl get pod -o wide
+
+kubectl exec -it busybox1 -- /bin/sh
+curl <ip-address>
+
+netpol1.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: access-nginx1
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+kubectl create -f netpol1.yaml
+
+curl <ip-address>
+
+netpol2.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: access-nginx2
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: jumppod
+
+kubectl create -f netpol2.yaml
+
+
+Lab 4 -Enable Pod Security Policy 
+
+kube-apiserver --enable-admission-plug-ins=PodSecurity
+
+
+Lab 5 -Create policies
+
+--> privileged.yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: Privileged
+spec:
+  privileged: true
+  allowPrivilegeEscalation: true
+  allowedCapabilities:
+  - '*'
+  volumes:
+  - '*'
+  hostNetwork: true
+  hostPorts:
+  - min: 0
+    max: 65535
+  hostIPC: true
+  hostPID: true
+  runAsUser:
+    rule: 'RunAsAny'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+
+kubectl create -f privileged.yaml
+
+-- restricted.yaml
+apiVersion: policy/v1
+kind: PodSecurityPolicy
+metadata:
+  name: Restricted
+spec:
+  privileged: false
+  selinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  volumes:
+  - '*'
+  hostPorts:
+  - min: 433
+  - max: 433
+
+kubectl create -f restricted.yaml
+
+
+Lab 6 -Security Context
+
+pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sec-context
+spec:
+  securityContext:
+    runAsUser: 600
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
+    securityContext:
+      allowPrivilegeEscalation: false
+
+
+Lab 7 -Secure persistent key value store
+
+ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
+
+test.yaml
+kind: EncryptionConfig
+apiVersion: v1
+resources:
+- resources:
+  - secrets
+  providers:
+    - aescbc:
+        keys:
+          - name: key1
+            secret: ${ENCRYPTION_KEY}
+    - identity: {}
+
+kube-apiserver --encryption-provider-config test.yaml
+kubectl create secret generic testsecret -n default 
+
+Verification:
+ETCDCTL_API=3 etcdctl get /registry/secrets/default/testsecret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
