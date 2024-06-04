@@ -1,0 +1,71 @@
+Lab 1 - Master bring-up using kubeadm
+
+sudo apt-get update
+sudo apt-get install docker.io -y
+sudo apt-get install apt-transport-https curl -y
+Add K8S key and Repo (All hosts)
+ - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    deb https://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+	
+
+sudo apt-get update
+
+sudo apt-get install -y kubelet=1.23.1-00
+sudo apt-get install -y kubeadm=1.23.1-00
+sudo apt-get install -y kubectl=1.23.1-00
+		
+
+Initiate the Cluster
+    sudo kubeadm init --control-plane-endpoint kube-master:6443 --pod-network-cidr 10.10.0.0/16
+
+    Set the kubectl context auth to connect to the cluster
+	mkdir -p $HOME/.kube
+	sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+	sudo chown $(id -u):$(id -g) $HOME/.kube/config
+		
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+
+Lab 2 - Worker node bring-up using kubeadm
+
+  sudo apt-get update
+  sudo apt-get install docker.io -y
+  sudo apt-get install apt-transport-https curl -y
+  Add K8S key and Repo (All hosts)
+  - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+  cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+	deb https://apt.kubernetes.io/ kubernetes-xenial main
+	EOF
+	
+    sudo apt-get update
+	
+
+    sudo apt-get install -y kubelet=1.23.1-00
+    sudo apt-get install -y kubeadm=1.23.1-00
+    sudo apt-get install -y kubectl=1.23.1-00
+	
+   Format for joining worker node
+   sudo kubeadm join --token TOKEN_ID CONTROL_PLANE_HOSTNAME:CONTROL_PLANE_PORT --discovery-token-ca-cert-hash sha256:HASH
+    
+		sudo kubeadm join --token 1qn2nt.gqkp87xmpos4oeiw kube-master:6443 --discovery-token-ca-cert-hash sha256:791942041dd8aa55f7d23b2825750d21be39ed8dce3b551859e874cd4a86a873
+   
+  run -> kubectl get nodes -o wide 
+  to verify worker node is READY
+  
+  
+  
+Lab 3 - Manage cluster with kubeadm
+On Master node:
+	#Create a new Token
+	sudo kubeadm token create
+	#List Tokens created
+	sudo kubeadm token list
+	#Find Certificate Hash on Master
+	openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | 
+	   openssl rsa -pubin -outform der 2>/dev/null | 
+	   openssl dgst -sha256 -hex | sed 's/^.* //'
+
+   Join Nodes (Only on Worker nodes)
+	sudo kubeadm join --token TOKEN_ID CONTROL_PLANE_HOSTNAME:CONTROL_PLANE_PORT --discovery-token-ca-cert-hash sha256:HASH
