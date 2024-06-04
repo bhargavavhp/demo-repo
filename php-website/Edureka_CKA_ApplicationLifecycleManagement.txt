@@ -1,0 +1,182 @@
+Lab 1: Perform rolling updates on a deployment
+
+kubectl create -f https://raw.githubusercontent.com/David-VTUK/CKAExampleYaml/master/nginx-svc-and-deployment.yaml
+
+kubectl set image deploy nginx-deployment nginx=nginx:1.7.11 --record=true
+
+
+Lab 2: Change the update strategy for a deployment
+
+--> nginx-svc-and-deployment.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+
+kubectl apply -f nginx-svc-and-deployment.yaml
+
+Lab 3: Perform a rollback on a deployment
+
+kubectl rollout history deploy nginx-deployment
+kubectl rollout undo deploy testdeploy --to-revision=2
+
+Lab 4: Scale a deployment
+
+kubectl scale --replicas=6 deploy nginx-deployment
+
+
+Lab 5: Create and run a Job
+
+--> job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: perl:5.34.0
+        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
+  backoffLimit: 4
+
+kubectl apply -f job.yaml
+kubectl describe job pi
+kubectl get job pi -o yaml
+
+Lab 6: Create and use a Config Map
+
+cd /tmp/
+vi db_h.txt
+vi db_p.txt
+
+kubectl create configmap db-connection --from-file=db_h.txt --from-file=db_p.txt
+
+-->pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginxpod
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.16
+    ports:
+    - containerPort: 80
+    envFrom:
+    - configMapRef:
+        name: db-connection
+
+kubectl create -f pod.yaml
+
+Lab 7: Create and use Secrets
+
+
+kubectl create secret generic db-credentials --from-literal=db-username=dbuser --from-literal=db-password=dbpassword
+secretpod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-pod
+spec:
+  containers:
+  - name: secret-pod
+    image: redis
+    env:
+    - name: SECRET_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: newsecret
+          key: db-username
+    - name: SECRET_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: newsecret
+          key: db-password
+
+kubectl create -f secretpod.yaml
+
+Lab 8: Configure a pod with specific environment variables
+
+pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: testpod
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    env:
+    - name: Variable1
+      value: somevalue
+    - name: Variable2
+      value: someothervalue
+
+kubectl create -f pod.yaml
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
