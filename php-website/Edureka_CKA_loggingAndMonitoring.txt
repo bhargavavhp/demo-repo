@@ -1,0 +1,51 @@
+Lab Activity 1 -General cluster status
+
+kubectl get po -o wide -n kubesystem
+
+
+Lab Activity 2 -Acquiring component logs
+
+Master: /var/log or /var/log/containers
+
+kube-apiserver.log, kube-scheduler.log, kube-controller-manager.log
+
+Workers: /var/log or /var/log/containers
+
+kubelet.log, kubeproxy.log, 
+
+
+Lab Activity 3 -Application Monitoring
+
+
+deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy
+spec:
+  selector:
+    matchLabels:
+      app: nginx-deploy
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx-deploy
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+
+kubectl create -f deployment.yaml
+
+kubectl get events --output json
+
+kubectl get events --field-selector involvedObject.name=nginx-deploy -n default
+kubectl get rs
+kubectl describe rs/<replicaset-name>
+kubectl get svc
+kubectl describe svc <service-name>
+--> endpoints are the IPs assigned to pods (kubectl get pods -o wide)
+kubectl logs nginx-deploy
